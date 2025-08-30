@@ -1,43 +1,28 @@
-// tests/api.test.js
 const axios = require("axios");
 const { expect } = require("chai");
 
-describe("API Test - Restful Booker", function () {
-  this.timeout(20000); // 20 seconds timeout for API calls
+describe("API - Bookstore Backend", function () {
+  this.timeout(15000);
+  const base = "http://localhost:5000";
 
-  it("should fetch bookings", async function () {
-    const response = await axios.get("https://restful-booker.herokuapp.com/booking");
-    expect(response.status).to.equal(200);
-    expect(response.data).to.be.an("array");
+  it("GET /health should be ok", async () => {
+    const res = await axios.get(`${base}/health`);
+    expect(res.status).to.equal(200);
+    expect(res.data.ok).to.equal(true);
   });
 
-  it("should create a booking", async function () {
-    const response = await axios.post(
-      "https://restful-booker.herokuapp.com/booking",
-      {
-        firstname: "Jim",
-        lastname: "Brown",
-        totalprice: 111,
-        depositpaid: true,
-        bookingdates: {
-          checkin: "2025-01-01",
-          checkout: "2025-01-14",
-        },
-        additionalneeds: "Breakfast",
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-      }
-    );
+  it("GET /books returns a list", async () => {
+    const res = await axios.get(`${base}/books`);
+    expect(res.status).to.equal(200);
+    expect(res.data).to.be.an("array").that.is.not.empty;
+    expect(res.data[0]).to.have.keys(["id", "title", "author", "price"]);
+  });
 
-    expect(response.status).to.equal(200);
-    expect(response.data).to.have.property("bookingid");
-    expect(response.data.booking).to.include({
-      firstname: "Jim",
-      lastname: "Brown",
+  it("POST /order places an order", async () => {
+    const res = await axios.post(`${base}/order`, { bookId: 1 }, {
+      headers: { "Content-Type": "application/json" }
     });
+    expect(res.status).to.equal(200);
+    expect(res.data.message).to.include("Order placed for");
   });
 });

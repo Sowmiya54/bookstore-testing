@@ -1,28 +1,20 @@
-// tests/ui.test.js
 const { Builder, By, until } = require("selenium-webdriver");
-const chrome = require("selenium-webdriver/chrome");
-const chromedriver = require("chromedriver");
+require("chromedriver");
 const { expect } = require("chai");
-const fs = require("fs");
 
-describe("UI Test - Saucedemo Login", function () {
-  this.timeout(60000);
+describe("UI - Bookstore Frontend", function () {
+  this.timeout(60000); // 60 seconds timeout
+
   let driver;
+  const frontendURL = "http://localhost:5173";
 
   before(async function () {
-    // Setup Chrome Service correctly
-    const service = new chrome.ServiceBuilder(chromedriver.path);
+    console.log("🚀 Starting Selenium...");
+    driver = await new Builder().forBrowser("chrome").build();
+    await driver.get(frontendURL);
 
-    // Launch Chrome in guest mode to skip profile selection
-    const options = new chrome.Options().addArguments("--guest");
-
-    driver = await new Builder()
-      .forBrowser("chrome")
-      .setChromeOptions(options)
-      .setChromeService(service) // ✅ ServiceBuilder, not .build()
-      .build();
-
-    await driver.get("https://www.saucedemo.com/");
+    const title = await driver.getTitle();
+    console.log("🌍 Page loaded, title:", title);
   });
 
   after(async function () {
@@ -31,22 +23,30 @@ describe("UI Test - Saucedemo Login", function () {
     }
   });
 
-  it("should login successfully", async function () {
-    // Enter username & password
-    await driver.findElement(By.id("user-name")).sendKeys("standard_user");
-    await driver.findElement(By.id("password")).sendKeys("secret_sauce");
-    await driver.findElement(By.id("login-button")).click();
+  it("should display books when 'Show Available Books' is clicked", async function () {
+    console.log("🔎 Looking for #show-books button...");
 
-    // Wait for redirect to inventory page
-    await driver.wait(until.urlContains("inventory"), 10000);
+    // Wait for the button to appear in the DOM
+    const showBooksButton = await driver.wait(
+      until.elementLocated(By.id("show-books")),
+      10000
+    );
 
-    // Assert URL contains 'inventory'
-    const currentUrl = await driver.getCurrentUrl();
-    expect(currentUrl).to.include("inventory");
+    console.log("✅ Found 'Show Available Books' button, clicking...");
+    await showBooksButton.click();
 
-    // Take screenshot for confirmation
-    const screenshot = await driver.takeScreenshot();
-    fs.writeFileSync("saucedemo-login.png", screenshot, "base64");
-    console.log("📸 Screenshot saved: saucedemo-login.png");
+    // Wait for the grid of books to appear
+    const bookGrid = await driver.wait(
+      until.elementLocated(By.css(".book-grid")), // ✅ updated selector
+      10000
+    );
+
+    console.log("📚 Book grid appeared!");
+
+    // Check that at least one book-card exists
+    const books = await driver.findElements(By.css(".book-card"));
+    console.log(`📚 Found ${books.length} book(s).`);
+
+    expect(books.length).to.be.greaterThan(0);
   });
 });
